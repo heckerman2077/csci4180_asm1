@@ -47,7 +47,7 @@ public class NgramInitialRF {
       }
     }
 
-    private final static IntWritable one = new IntWritable(1);
+    private IntWritable int_writable = new IntWritable();
     private Text word_initial = new Text();
     private MapWritable map_writable = new MapWritable();
     private Text map_key = new Text();
@@ -75,20 +75,37 @@ public class NgramInitialRF {
         // initial_ngram[i] = itr.nextToken().charAt(0);
       }
 
+      HashMap<Character, HashMap<String, Integer>> m = new HashMap<>();
+
       // initialize Ngram class
       Ngram ngram = new Ngram(initial_ngram);
 
       // emit the first ngram
       {
         String ngram_str = ngram.getAsString();
-        // emit key is the word's initial
-        word_initial.set(ngram_str.substring(0, 1));
-        // emit value is a map
-        // the map's key a string of the other word initials besides the first
-        // the map's value is 1
-        map_key.set(ngram_str.substring(1));
-        map_writable.put(map_key, one);
-        context.write(word_initial, map_writable);
+        char first_initial = ngram_str.charAt(0);
+        String rest_of_initials = ngram_str.substring(1);
+        if (m.containsKey(first_initial)) {
+          HashMap<String, Integer> existing_map = m.get(first_initial);
+          if (existing_map.containsKey(rest_of_initials)) {
+            existing_map.put(rest_of_initials, 1);
+          } else {
+            existing_map.put(rest_of_initials, existing_map.get(rest_of_initials) + 1);
+          }
+        } else {
+          HashMap<String, Integer> new_map = new HashMap<>();
+          new_map.put(rest_of_initials, 1);
+          m.put(first_initial, new_map);
+        }
+        // String ngram_str = ngram.getAsString();
+        // // emit key is the word's initial
+        // word_initial.set(ngram_str.substring(0, 1));
+        // // emit value is a map
+        // // the map's key a string of the other word initials besides the first
+        // // the map's value is 1
+        // map_key.set(ngram_str.substring(1));
+        // map_writable.put(map_key, one);
+        // context.write(word_initial, map_writable);
       }
 
       while (itr.hasMoreTokens()) {
@@ -99,16 +116,41 @@ public class NgramInitialRF {
         // char ch = itr.nextToken().charAt(0);
         ngram.InsertAndShift(ch);
 
-        // emit ngram
         String ngram_str = ngram.getAsString();
-        word_initial.set(ngram_str.substring(0, 1));
-        map_key.set(ngram_str.substring(1));
-        map_writable.put(map_key, one);
+        char first_initial = ngram_str.charAt(0);
+        String rest_of_initials = ngram_str.substring(1);
+        if (m.containsKey(first_initial)) {
+          HashMap<String, Integer> existing_map = m.get(first_initial);
+          if (existing_map.containsKey(rest_of_initials)) {
+            existing_map.put(rest_of_initials, existing_map.get(rest_of_initials) + 1);
+          } else {
+            existing_map.put(rest_of_initials, 1);
+          }
+        } else {
+          HashMap<String, Integer> new_map = new HashMap<>();
+          new_map.put(rest_of_initials, 1);
+          m.put(first_initial, new_map);
+        }
+        // // emit ngram
+        // String ngram_str = ngram.getAsString();
+        // word_initial.set(ngram_str.substring(0, 1));
+        // map_key.set(ngram_str.substring(1));
+        // map_writable.put(map_key, one);
+        // context.write(word_initial, map_writable);
+        // System.out.print(word_initial.toString());
+        // System.out.print(" -> {");
+        // System.out.print(map_key);
+        // System.out.println(": 1}");
+      }
+      for (Map.Entry<Character, HashMap<String, Integer>> e : m.entrySet()) {
+        word_initial.set(e.getKey().toString());
+        for (Map.Entry<String, Integer> f : e.getValue().entrySet()) {
+          map_key.set(f.getKey());
+          int_writable.set(f.getValue());
+          map_writable.put(map_key, int_writable);
+        }
         context.write(word_initial, map_writable);
-        System.out.print(word_initial.toString());
-        System.out.print(" -> {");
-        System.out.print(map_key);
-        System.out.println(": 1}");
+        map_writable.clear();
       }
     }
   }
