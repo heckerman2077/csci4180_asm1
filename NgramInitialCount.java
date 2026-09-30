@@ -46,10 +46,8 @@ public class NgramInitialCount {
       }
     }
 
-    private IntWritable int_writable = new IntWritable();
     private Text word_initial = new Text();
     private MapWritable map_writable = new MapWritable();
-    private Text map_key = new Text();
 
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
       // get argument N from configuration
@@ -87,9 +85,9 @@ public class NgramInitialCount {
         if (m.containsKey(first_initial)) {
           HashMap<String, Integer> existing_map = m.get(first_initial);
           if (existing_map.containsKey(rest_of_initials)) {
-            existing_map.put(rest_of_initials, 1);
-          } else {
             existing_map.put(rest_of_initials, existing_map.get(rest_of_initials) + 1);
+          } else {
+            existing_map.put(rest_of_initials, 1);
           }
         } else {
           HashMap<String, Integer> new_map = new HashMap<>();
@@ -144,9 +142,7 @@ public class NgramInitialCount {
       for (Map.Entry<Character, HashMap<String, Integer>> e : m.entrySet()) {
         word_initial.set(e.getKey().toString());
         for (Map.Entry<String, Integer> f : e.getValue().entrySet()) {
-          map_key.set(f.getKey());
-          int_writable.set(f.getValue());
-          map_writable.put(map_key, int_writable);
+          map_writable.put(new Text(f.getKey()), new IntWritable(f.getValue()));
         }
         context.write(word_initial, map_writable);
         map_writable.clear();
