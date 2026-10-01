@@ -66,7 +66,9 @@ public class NgramInitialRF {
       for (Map.Entry<Character, HashMap<String, Integer>> e : m.entrySet()) {
         word_initial.set(e.getKey().toString());
         for (Map.Entry<String, Integer> f : e.getValue().entrySet()) {
-          map_writable.put(new Text(f.getKey()), new IntWritable(f.getValue()));
+          map_writable.put(
+              new Text(f.getKey()),
+              new IntWritable(f.getValue()));
         }
         context.write(word_initial, map_writable);
         map_writable.clear();
@@ -108,11 +110,9 @@ public class NgramInitialRF {
 
         if (m.containsKey(first_initial)) {
           HashMap<String, Integer> existing_map = m.get(first_initial);
-          if (existing_map.containsKey(rest_of_initials)) {
-            existing_map.put(rest_of_initials, existing_map.get(rest_of_initials) + 1);
-          } else {
-            existing_map.put(rest_of_initials, 1);
-          }
+          existing_map.put(
+              rest_of_initials,
+              existing_map.containsKey(rest_of_initials) ? existing_map.get(rest_of_initials) + 1 : 1);
         } else {
           HashMap<String, Integer> new_map = new HashMap<>();
           new_map.put(rest_of_initials, 1);
@@ -143,11 +143,9 @@ public class NgramInitialRF {
           total_count += count;
 
           String initials_tuple = first_initial.concat(rest_of_initials);
-          if (m.containsKey(initials_tuple)) {
-            m.put(initials_tuple, m.get(initials_tuple) + count);
-          } else {
-            m.put(initials_tuple, count);
-          }
+          m.put(
+              initials_tuple,
+              m.containsKey(initials_tuple) ? m.get(initials_tuple) + count : count);
         }
       }
 
