@@ -26,11 +26,9 @@ public class WordLengthCount {
       HashMap<Integer, Integer> m = new HashMap<>();
       while (itr.hasMoreTokens()) {
         int len = itr.nextToken().length();
-        if (m.containsKey(len)) {
-          m.put(len, m.get(len) + 1);
-        } else {
-          m.put(len, 1);
-        }
+        m.put(
+            len,
+            m.containsKey(len) ? m.get(len) + 1 : 1);
       }
       for (Map.Entry<Integer, Integer> e : m.entrySet()) {
         context.write(new IntWritable(e.getKey()), new IntWritable(e.getValue()));

@@ -81,13 +81,13 @@ public class NgramInitialRF {
       private int head;
 
       // data will reference the same underlying array from initial_data
-      public Ngram(char[] initial_data) {
+      private Ngram(char[] initial_data) {
         this.data = initial_data;
         this.n = this.data.length;
         this.head = 0;
       }
 
-      public String getAsString() {
+      private String getAsString() {
         StringBuilder sb = new StringBuilder(n);
         for (int i = 0, index = head; i < n; i++, index = (index + 1) % n) {
           sb.append(data[index]);
@@ -95,7 +95,7 @@ public class NgramInitialRF {
         return sb.toString();
       }
 
-      public void InsertAndShift(char ch) {
+      private void InsertAndShift(char ch) {
         data[head] = ch;
         head = (head + 1) % n;
       }
