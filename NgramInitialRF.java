@@ -181,7 +181,7 @@ public class NgramInitialRF {
       }
 
       for (Map.Entry<String, Integer> e : m.entrySet()) {
-        initials_writable.set(e.getKey());
+        initials_writable.set(e.getKey().replace("", " ").trim());
         int count = e.getValue();
         double relative_freq = (double) count / (double) total_count;
         if (relative_freq < theta) {

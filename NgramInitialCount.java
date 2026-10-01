@@ -175,7 +175,7 @@ public class NgramInitialCount {
       }
 
       for (Map.Entry<String, Integer> e : m.entrySet()) {
-        initials_writable.set(e.getKey());
+        initials_writable.set(e.getKey().replace("", " ").trim());
         count_writable.set(e.getValue());
         context.write(initials_writable, count_writable);
       }
