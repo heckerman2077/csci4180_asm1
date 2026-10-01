@@ -20,6 +20,58 @@ public class NgramInitialCount {
   public static class TokenizerMapper
       extends Mapper<Object, Text, Text, MapWritable> {
 
+    private Text word_initial = new Text();
+    private MapWritable map_writable = new MapWritable();
+
+    public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+      // get argument N from configuration
+      // will not manually check if N is parsable as an int
+      // or if it is a positive integer
+      Configuration conf = context.getConfiguration();
+      int N = Integer.parseInt(conf.get("N"));
+
+      // define StringTokenizer custom delimiter
+      // non-alphabet ascii characters
+      String delim = " \t\n\r\f1234567890!\"#$&'()+,./:;<=?@[\\]^_`{|}~";
+      StringTokenizer itr = new StringTokenizer(value.toString(), delim);
+
+      // get the first ngram
+      char initial_ngram[] = new char[N];
+      System.out.println("[start of hdfs block]");
+      for (int i = 0; i < N && itr.hasMoreTokens(); i++) {
+        String token = itr.nextToken();
+        System.out.printf("during init: %s\n", token);
+        initial_ngram[i] = token.charAt(0);
+      }
+
+      HashMap<Character, HashMap<String, Integer>> m = new HashMap<>();
+
+      // initialize Ngram class
+      Ngram ngram = new Ngram(initial_ngram);
+
+      // first ngram
+      ngram.storeToMap(m);
+
+      while (itr.hasMoreTokens()) {
+        String token = itr.nextToken();
+        System.out.println(token);
+        char ch = token.charAt(0);
+        // update the ngram
+        // char ch = itr.nextToken().charAt(0);
+        ngram.InsertAndShift(ch);
+
+        ngram.storeToMap(m);
+      }
+      for (Map.Entry<Character, HashMap<String, Integer>> e : m.entrySet()) {
+        word_initial.set(e.getKey().toString());
+        for (Map.Entry<String, Integer> f : e.getValue().entrySet()) {
+          map_writable.put(new Text(f.getKey()), new IntWritable(f.getValue()));
+        }
+        context.write(word_initial, map_writable);
+        map_writable.clear();
+      }
+    }
+
     private static class Ngram {
       int n;
       private char data[];
@@ -44,44 +96,15 @@ public class NgramInitialCount {
         data[head] = ch;
         head = (head + 1) % n;
       }
-    }
 
-    private Text word_initial = new Text();
-    private MapWritable map_writable = new MapWritable();
-
-    public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-      // get argument N from configuration
-      // will not manually check if N is parsable as an int
-      // or if it is a positive integer
-      Configuration conf = context.getConfiguration();
-      int N = Integer.parseInt(conf.get("N"));
-
-      // define StringTokenizer custom delimiter
-      // non-alphabet ascii characters
-      String delim = " \t\n\r\f1234567890!\"#$&'()+,./:;<=?@[\\]^_`{|}~";
-      StringTokenizer itr = new StringTokenizer(value.toString(), delim);
-
-      // get the first ngram
-      char initial_ngram[] = new char[N];
-      System.out.println("[start of hdfs block]");
-      for (int i = 0; i < N && itr.hasMoreTokens(); i++) {
-        String token = itr.nextToken();
-        System.out.print("during init: ");
-        System.out.println(token);
-        initial_ngram[i] = token.charAt(0);
-        // initial_ngram[i] = itr.nextToken().charAt(0);
-      }
-
-      HashMap<Character, HashMap<String, Integer>> m = new HashMap<>();
-
-      // initialize Ngram class
-      Ngram ngram = new Ngram(initial_ngram);
-
-      // emit the first ngram
-      {
-        String ngram_str = ngram.getAsString();
+      // stores to map
+      // {first_initial={rest_of_initials=1}}
+      // or increments the Integer value if the rest_of_initials key exists
+      private void storeToMap(HashMap<Character, HashMap<String, Integer>> m) {
+        String ngram_str = this.getAsString();
         char first_initial = ngram_str.charAt(0);
         String rest_of_initials = ngram_str.substring(1);
+
         if (m.containsKey(first_initial)) {
           HashMap<String, Integer> existing_map = m.get(first_initial);
           if (existing_map.containsKey(rest_of_initials)) {
@@ -94,58 +117,6 @@ public class NgramInitialCount {
           new_map.put(rest_of_initials, 1);
           m.put(first_initial, new_map);
         }
-        // String ngram_str = ngram.getAsString();
-        // // emit key is the word's initial
-        // word_initial.set(ngram_str.substring(0, 1));
-        // // emit value is a map
-        // // the map's key a string of the other word initials besides the first
-        // // the map's value is 1
-        // map_key.set(ngram_str.substring(1));
-        // map_writable.put(map_key, one);
-        // context.write(word_initial, map_writable);
-      }
-
-      while (itr.hasMoreTokens()) {
-        String token = itr.nextToken();
-        System.out.println(token);
-        char ch = token.charAt(0);
-        // update the ngram
-        // char ch = itr.nextToken().charAt(0);
-        ngram.InsertAndShift(ch);
-
-        String ngram_str = ngram.getAsString();
-        char first_initial = ngram_str.charAt(0);
-        String rest_of_initials = ngram_str.substring(1);
-        if (m.containsKey(first_initial)) {
-          HashMap<String, Integer> existing_map = m.get(first_initial);
-          if (existing_map.containsKey(rest_of_initials)) {
-            existing_map.put(rest_of_initials, existing_map.get(rest_of_initials) + 1);
-          } else {
-            existing_map.put(rest_of_initials, 1);
-          }
-        } else {
-          HashMap<String, Integer> new_map = new HashMap<>();
-          new_map.put(rest_of_initials, 1);
-          m.put(first_initial, new_map);
-        }
-        // // emit ngram
-        // String ngram_str = ngram.getAsString();
-        // word_initial.set(ngram_str.substring(0, 1));
-        // map_key.set(ngram_str.substring(1));
-        // map_writable.put(map_key, one);
-        // context.write(word_initial, map_writable);
-        // System.out.print(word_initial.toString());
-        // System.out.print(" -> {");
-        // System.out.print(map_key);
-        // System.out.println(": 1}");
-      }
-      for (Map.Entry<Character, HashMap<String, Integer>> e : m.entrySet()) {
-        word_initial.set(e.getKey().toString());
-        for (Map.Entry<String, Integer> f : e.getValue().entrySet()) {
-          map_writable.put(new Text(f.getKey()), new IntWritable(f.getValue()));
-        }
-        context.write(word_initial, map_writable);
-        map_writable.clear();
       }
     }
   }
