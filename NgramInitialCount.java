@@ -59,22 +59,22 @@ public class NgramInitialCount {
 
       while (itr.hasMoreTokens()) {
         String token = itr.nextToken();
-        System.out.println(token);
+        // System.out.println(token);
         char ch = token.charAt(0);
 
         // initialize ngram with (n - 1) elements if not initialized
         if (!ngram.isInitialized()) {
-          System.out.printf("initializing: %c\n", ch);
+          // System.out.printf("initializing: %c\n", ch);
           ngram.initialize(ch);
           continue;
         }
 
         // update the ngram
         // char ch = itr.nextToken().charAt(0);
-        System.out.printf("after init: %c\n", ch);
+        // System.out.printf("after init: %c\n", ch);
         ngram.InsertAndShift(ch);
 
-        System.out.printf("storing to map: %s\n", ngram.getAsString());
+        // System.out.printf("storing to map: %s\n", ngram.getAsString());
         ngram.storeToMap(m);
       }
     }
