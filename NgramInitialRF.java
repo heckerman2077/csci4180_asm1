@@ -58,24 +58,21 @@ public class NgramInitialRF {
       String delim = " \t\n\r\f!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~";
       StringTokenizer itr = new StringTokenizer(value.toString(), delim);
 
-      while (itr.hasMoreTokens()) {
-        String token = itr.nextToken();
-        // System.out.println(token);
-        char ch = token.charAt(0);
+      // initialize ngram with (n - 1) elements if not initialized
+      while (ngram.notInitialized() && itr.hasMoreTokens()) {
+        // get the first character of the next token
+        char ch = itr.nextToken().charAt(0);
+        ngram.initialize(ch);
+      }
 
-        // initialize ngram with (n - 1) elements if not initialized
-        if (!ngram.isInitialized()) {
-          // System.out.printf("initializing: %c\n", ch);
-          ngram.initialize(ch);
-          continue;
-        }
+      while (itr.hasMoreTokens()) {
+        // get the first character of the next token
+        char ch = itr.nextToken().charAt(0);
 
         // update the ngram
-        // char ch = itr.nextToken().charAt(0);
-        // System.out.printf("after init: %c\n", ch);
         ngram.InsertAndShift(ch);
 
-        // System.out.printf("storing to map: %s\n", ngram.getAsString());
+        // store ngram to hashmap
         ngram.storeToMap(m);
       }
     }
@@ -94,9 +91,9 @@ public class NgramInitialRF {
         this.head = 0;
       }
 
-      // isInitialized() will return true when ngram has (n - 1) elements
-      private boolean isInitialized() {
-        return initialize_count >= n - 1;
+      // notInitialized() will return true when ngram has less than (n - 1) elements
+      private boolean notInitialized() {
+        return initialize_count < n - 1;
       }
 
       private void initialize(char ch) {
