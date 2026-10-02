@@ -24,45 +24,22 @@ public class NgramInitialRF {
     private Text word_initial = new Text();
     private MapWritable map_writable = new MapWritable();
 
-    public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+    private Ngram ngram;
+    private HashMap<Character, HashMap<String, Integer>> m = new HashMap<>();
+
+    public void setup(Context context) throws IOException, InterruptedException {
       // get argument N from configuration
       // will not manually check if N is parsable as an int
       // or if it is a positive integer
       Configuration conf = context.getConfiguration();
       int N = Integer.parseInt(conf.get("N"));
 
-      // define StringTokenizer custom delimiter
-      // non-alphabet ascii characters
-      String delim = " \t\n\r\f1234567890!\"#$&'()+,./:;<=?@[\\]^_`{|}~";
-      StringTokenizer itr = new StringTokenizer(value.toString(), delim);
+      // initialze ngram class
+      ngram = new Ngram(N);
+    }
 
-      // get the first ngram
-      char initial_ngram[] = new char[N];
-      System.out.println("[start of hdfs block]");
-      for (int i = 0; i < N && itr.hasMoreTokens(); i++) {
-        String token = itr.nextToken();
-        System.out.printf("during init: %s\n", token);
-        initial_ngram[i] = token.charAt(0);
-      }
-
-      HashMap<Character, HashMap<String, Integer>> m = new HashMap<>();
-
-      // initialize Ngram class
-      Ngram ngram = new Ngram(initial_ngram);
-
-      // first ngram
-      ngram.storeToMap(m);
-
-      while (itr.hasMoreTokens()) {
-        String token = itr.nextToken();
-        System.out.println(token);
-        char ch = token.charAt(0);
-        // update the ngram
-        // char ch = itr.nextToken().charAt(0);
-        ngram.InsertAndShift(ch);
-
-        ngram.storeToMap(m);
-      }
+    public void cleanup(Context context) throws IOException, InterruptedException {
+      // emit the combined values once
       for (Map.Entry<Character, HashMap<String, Integer>> e : m.entrySet()) {
         word_initial.set(e.getKey().toString());
         for (Map.Entry<String, Integer> f : e.getValue().entrySet()) {
@@ -75,16 +52,56 @@ public class NgramInitialRF {
       }
     }
 
+    public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
+      // define StringTokenizer custom delimiter
+      // non-alphabet ascii characters
+      String delim = " \t\n\r\f!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~";
+      StringTokenizer itr = new StringTokenizer(value.toString(), delim);
+
+      while (itr.hasMoreTokens()) {
+        String token = itr.nextToken();
+        System.out.println(token);
+        char ch = token.charAt(0);
+
+        // initialize ngram with (n - 1) elements if not initialized
+        if (!ngram.isInitialized()) {
+          System.out.printf("initializing: %c\n", ch);
+          ngram.initialize(ch);
+          continue;
+        }
+
+        // update the ngram
+        // char ch = itr.nextToken().charAt(0);
+        System.out.printf("after init: %c\n", ch);
+        ngram.InsertAndShift(ch);
+
+        System.out.printf("storing to map: %s\n", ngram.getAsString());
+        ngram.storeToMap(m);
+      }
+    }
+
     private static class Ngram {
       int n;
       private char data[];
+      private int initialize_count;
       private int head;
 
       // data will reference the same underlying array from initial_data
-      private Ngram(char[] initial_data) {
-        this.data = initial_data;
-        this.n = this.data.length;
+      private Ngram(int n) {
+        this.data = new char[n];
+        this.initialize_count = 0;
+        this.n = n;
         this.head = 0;
+      }
+
+      // isInitialized() will return true when ngram has (n - 1) elements
+      private boolean isInitialized() {
+        return initialize_count >= n - 1;
+      }
+
+      private void initialize(char ch) {
+        this.InsertAndShift(ch);
+        initialize_count++;
       }
 
       private String getAsString() {
