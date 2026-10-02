@@ -21,17 +21,23 @@ public class WordLengthCount {
     // private final static IntWritable one = new IntWritable(1);
     // private IntWritable word_length = new IntWritable();
 
+    private HashMap<Integer, Integer> m = new HashMap<>();
+
+    public void cleanup(Context context) throws IOException, InterruptedException {
+      for (Map.Entry<Integer, Integer> e : m.entrySet()) {
+        context.write(
+            new IntWritable(e.getKey()),
+            new IntWritable(e.getValue()));
+      }
+    }
+
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
       StringTokenizer itr = new StringTokenizer(value.toString());
-      HashMap<Integer, Integer> m = new HashMap<>();
       while (itr.hasMoreTokens()) {
         int len = itr.nextToken().length();
         m.put(
             len,
             m.containsKey(len) ? m.get(len) + 1 : 1);
-      }
-      for (Map.Entry<Integer, Integer> e : m.entrySet()) {
-        context.write(new IntWritable(e.getKey()), new IntWritable(e.getValue()));
       }
     }
   }
