@@ -5,7 +5,7 @@ import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -137,9 +137,9 @@ public class NgramInitialRF {
   }
 
   public static class StripeReducer
-      extends Reducer<Text, MapWritable, Text, DoubleWritable> {
+      extends Reducer<Text, MapWritable, Text, FloatWritable> {
     private Text initials_writable = new Text();
-    private DoubleWritable relatibe_frq_writable = new DoubleWritable();
+    private FloatWritable relatibe_frq_writable = new FloatWritable();
 
     public void reduce(Text key, Iterable<MapWritable> values, Context context)
         throws IOException, InterruptedException {
@@ -166,7 +166,7 @@ public class NgramInitialRF {
       for (Map.Entry<String, Integer> e : m.entrySet()) {
         initials_writable.set(e.getKey().replace("", " ").trim());
         int count = e.getValue();
-        double relative_freq = (double) count / (double) total_count;
+        float relative_freq = (float) count / (float) total_count;
         if (relative_freq < theta) {
           continue;
         }
@@ -189,7 +189,7 @@ public class NgramInitialRF {
     // job.setCombinerClass(IntSumReducer.class);
     job.setReducerClass(StripeReducer.class);
     job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(DoubleWritable.class);
+    job.setOutputValueClass(FloatWritable.class);
     FileInputFormat.addInputPath(job, new Path(args[0]));
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
     System.exit(job.waitForCompletion(true) ? 0 : 1);
